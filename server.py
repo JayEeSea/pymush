@@ -7,6 +7,7 @@ import configparser
 import logging
 from logging.handlers import RotatingFileHandler
 from mush_commands import handle_command
+import time
 
 class SimpleMUSHServer:
     def __init__(self, config_file='config.ini', channel_config_file='channel_config.ini'):
@@ -26,6 +27,11 @@ class SimpleMUSHServer:
             password=config['MYSQL']['Password'],
             database=config['MYSQL']['Database']
         )
+
+        # Track failed login attempts for account lockout
+        self.failed_attempts = {}
+        self.max_attempts = config.getint('LOCKOUT', 'MaxAttempts', fallback=3)  # Load from config
+        self.lockout_duration = config.getint('LOCKOUT', 'LockoutDuration', fallback=300)  # Load from config (seconds)
 
         # Load channel configuration
         channel_config = configparser.ConfigParser()
@@ -59,18 +65,20 @@ class SimpleMUSHServer:
             client_socket, client_address = self.server_socket.accept()
             logging.info(f'Connection from {client_address}')
             print(f'[INFO] Connection from {client_address}')
-            threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+            threading.Thread(target=self.handle_client, args=(client_socket, client_address)).start()
         
-    def handle_client(self, client_socket):
-        client_socket.send(f'Welcome to {self.server_name}!\nWould you like to (1) Login or (2) Create a new character?\n'.encode('utf-8'))
+    def handle_client(self, client_socket, client_address):
+        client_socket.send(f'Welcome to {self.server_name}!
+Would you like to (1) Login or (2) Create a new character?
+'.encode('utf-8'))
         while True:
             option = client_socket.recv(1024).decode('utf-8').strip()
             if option == '1':
-                if self.authenticate(client_socket):
+                if self.authenticate(client_socket, client_address):
                     break
                 else:
                     client_socket.send(b'Authentication failed. Please try again.\n')
-                    logging.warning(f'Failed authentication attempt from client {client_socket.getpeername()}')
+                    logging.warning(f'Failed authentication attempt from client {client_address}')
             elif option == '2':
                 if self.create_character(client_socket):
                     client_socket.send(b'Character creation successful! Please login.\n')
@@ -81,7 +89,7 @@ class SimpleMUSHServer:
         
         client_socket.send(b'Authentication successful!\n')
         self.clients.append(client_socket)
-        logging.info(f'Client {client_socket.getpeername()} authenticated successfully')
+        logging.info(f'Client {client_address} authenticated successfully')
         
         while True:
             try:
@@ -89,7 +97,7 @@ class SimpleMUSHServer:
                 if not message:
                     break
                 if message.startswith('/'):
-                    logging.debug(f'Received command from client {client_socket.getpeername()}: {message}')
+                    logging.debug(f'Received command from client {client_address}: {message}')
                     handle_command(message, client_socket, self.clients)
                 elif message.startswith('+'):
                     self.handle_channel_message(message, client_socket)
@@ -98,15 +106,29 @@ class SimpleMUSHServer:
             except ConnectionResetError:
                 break
         
-        logging.info(f'Client {client_socket.getpeername()} disconnected')
+        logging.info(f'Client {client_address} disconnected')
         print('Client disconnected')
         self.clients.remove(client_socket)
         client_socket.close()
         
-    def authenticate(self, client_socket):
-        client_socket.send(b'Username: ')
+    def authenticate(self, client_socket, client_address):
+        # Check if the account is currently locked
+        if client_address in self.failed_attempts:
+            attempts, last_failed_time = self.failed_attempts[client_address]
+            if attempts >= self.max_attempts:
+                remaining_lockout = self.lockout_duration - (time.time() - last_failed_time)
+                if remaining_lockout > 0:
+                    client_socket.send(f'Account is locked. Please try again in {int(remaining_lockout)} seconds.
+'.encode('utf-8'))
+                    logging.warning(f'Account lockout for {client_address}')
+                    return False
+                else:
+                    # Reset lockout after duration has passed
+                    self.failed_attempts[client_address] = (0, 0)
+
+        client_socket.send(b'Username: '.encode('utf-8'))
         username = client_socket.recv(1024).decode('utf-8').strip()
-        client_socket.send(b'Password: ')
+        client_socket.send(b'Password: '.encode('utf-8'))
         password = client_socket.recv(1024).decode('utf-8').strip()
         
         cursor = self.db.cursor()
@@ -117,15 +139,28 @@ class SimpleMUSHServer:
             salt, stored_hash = result
             hashed_password = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
             if hashed_password == stored_hash:
+                # Reset failed attempts after successful login
+                if client_address in self.failed_attempts:
+                    del self.failed_attempts[client_address]
                 return True
+
+        # Handle failed attempt
+        if client_address not in self.failed_attempts:
+            self.failed_attempts[client_address] = (1, time.time())
+        else:
+            attempts, _ = self.failed_attempts[client_address]
+            self.failed_attempts[client_address] = (attempts + 1, time.time())
+
+        if self.failed_attempts[client_address][0] >= self.max_attempts:
+            logging.warning(f'Account locked due to too many failed attempts for {client_address}')
         return False
 
     def create_character(self, client_socket):
-        client_socket.send(b'Choose a character name: ')
+        client_socket.send(b'Choose a character name: '.encode('utf-8'))
         username = client_socket.recv(1024).decode('utf-8').strip()
-        client_socket.send(b'Enter a password: ')
+        client_socket.send(b'Enter a password: '.encode('utf-8'))
         password = client_socket.recv(1024).decode('utf-8').strip()
-        client_socket.send(b'Enter your email address: ')
+        client_socket.send(b'Enter your email address: '.encode('utf-8'))
         email = client_socket.recv(1024).decode('utf-8').strip()
 
         salt = os.urandom(16).hex()
@@ -159,11 +194,12 @@ class SimpleMUSHServer:
             self.channels[channel_name].append(client_socket)
 
         sender_username = self.get_username(client_socket)
-        formatted_message = f'<{self.channel_names[channel_name]}> {sender_username} says, "{message_content}"\n'
+        formatted_message = f'<{self.channel_names[channel_name]}> {sender_username} says, "{message_content}"
+'.encode('utf-8')
         logging.info(f'Channel message on {channel_name} from {sender_username}: {message_content}')
         for client in self.channels[channel_name]:
             try:
-                client.send(formatted_message.encode('utf-8'))
+                client.send(formatted_message)
             except BrokenPipeError:
                 continue
         
