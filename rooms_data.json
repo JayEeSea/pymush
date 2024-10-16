@@ -1,0 +1,32 @@
+{
+    "1": {
+        "name": "Starting Room",
+        "description": "This is where your journey begins. You see doors to the north and east.",
+        "exits": {
+            "north": "2",
+            "east": "3"
+        }
+    },
+    "2": {
+        "name": "North Room",
+        "description": "You have entered the North Room. You see a door to the south.",
+        "exits": {
+            "south": "1"
+        }
+    },
+    "3": {
+        "name": "East Room",
+        "description": "This is the East Room. There are doors to the west and north.",
+        "exits": {
+            "west": "1",
+            "north": "4"
+        }
+    },
+    "4": {
+        "name": "Northern Room from East",
+        "description": "You are in the northern room connected from the east. There are doors to the south.",
+        "exits": {
+            "south": "3"
+        }
+    }
+}
