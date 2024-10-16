@@ -6,10 +6,10 @@ import os
 import configparser
 import logging
 from logging.handlers import RotatingFileHandler
-from mush_commands import handle_command, show_help
+from mush_commands import handle_command
 import time
 
-class SimpleMUSHServer:
+class pyMUSH:
     def __init__(self, config_file='config.ini', channel_config_file='channel_config.ini'):
         config = configparser.ConfigParser()
         config.read(config_file)
@@ -68,9 +68,7 @@ class SimpleMUSHServer:
             threading.Thread(target=self.handle_client, args=(client_socket, client_address)).start()
         
     def handle_client(self, client_socket, client_address):
-        client_socket.send(f'Welcome to {self.server_name}!
-Would you like to (1) Login or (2) Create a new character?
-'.encode('utf-8'))
+        client_socket.send(f'Welcome to {self.server_name}!\nWould you like to (1) Login or (2) Create a new character?'.encode('utf-8'))
         while True:
             option = client_socket.recv(1024).decode('utf-8').strip()
             if option == '1':
@@ -85,7 +83,7 @@ Would you like to (1) Login or (2) Create a new character?
                 else:
                     client_socket.send(b'Character creation failed. Please try again.\n')
             elif option == '/help':
-                show_help(client_socket)
+                self.show_help(client_socket)
             else:
                 client_socket.send(b'Invalid option. Please enter 1 to Login or 2 to Create a new character, or type /help for available commands.\n')
         
@@ -99,7 +97,7 @@ Would you like to (1) Login or (2) Create a new character?
                 if not message:
                     break
                 if message == '/help':
-                    show_help(client_socket)
+                    self.show_help(client_socket)
                 elif message.startswith('/'):
                     logging.debug(f'Received command from client {client_address}: {message}')
                     handle_command(message, client_socket, self.clients)
@@ -122,8 +120,7 @@ Would you like to (1) Login or (2) Create a new character?
             if attempts >= self.max_attempts:
                 remaining_lockout = self.lockout_duration - (time.time() - last_failed_time)
                 if remaining_lockout > 0:
-                    client_socket.send(f'Account is locked. Please try again in {int(remaining_lockout)} seconds.
-'.encode('utf-8'))
+                    client_socket.send(f'Account is locked. Please try again in {int(remaining_lockout)} seconds.\n'.encode('utf-8'))
                     logging.warning(f'Account lockout for {client_address}')
                     return False
                 else:
@@ -198,8 +195,7 @@ Would you like to (1) Login or (2) Create a new character?
             self.channels[channel_name].append(client_socket)
 
         sender_username = self.get_username(client_socket)
-        formatted_message = f'<{self.channel_names[channel_name]}> {sender_username} says, "{message_content}"
-'.encode('utf-8')
+        formatted_message = f'<{self.channel_names[channel_name]}> {sender_username} says, "{message_content}"\n'.encode('utf-8')
         logging.info(f'Channel message on {channel_name} from {sender_username}: {message_content}')
         for client in self.channels[channel_name]:
             try:
@@ -224,5 +220,5 @@ Would you like to (1) Login or (2) Create a new character?
                     continue
         
 if __name__ == '__main__':
-    server = SimpleMUSHServer()
+    server = pyMUSH()
     server.start()
