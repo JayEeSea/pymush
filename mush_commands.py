@@ -98,22 +98,24 @@ def handle_command(command, client_socket, clients, channels, channel_config_fil
             # General help - list all commands
             try:
                 with open(help_file, 'r') as f:
-                    help_message = f.read()
+                    help_message = ""
+                    for line in f:
+                        if not line.startswith('&&'):
+                            help_message += line
                 client_socket.send(help_message.encode('utf-8'))
             except FileNotFoundError:
                 client_socket.send(b'Help file not found.\n')
         elif len(parts) == 2:
             # Detailed help for a specific command
-            requested_command = parts[1].strip()
+            requested_command = parts[1].strip().lower()
             try:
                 with open(help_file, 'r') as f:
-                    lines = f.readlines()
                     detailed_help = []
                     capture = False
-                    for line in lines:
-                        if line.startswith(f'/{requested_command} '):
+                    for line in f:
+                        if line.startswith(f'&&{requested_command}'):
                             capture = True
-                        elif line.startswith('/') and capture:
+                        elif line.startswith('&&') and capture:
                             break
                         if capture:
                             detailed_help.append(line)
