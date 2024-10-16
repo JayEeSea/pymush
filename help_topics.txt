@@ -10,33 +10,71 @@ Available commands:
 /help - Show this help message
 /help <command> - Show detailed help for the specified command
 
+&&quit
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - QUIT
+-------------------------------------------------------------------------------
 /quit - Detailed Help:
 The /quit command allows you to disconnect from the server.
+-------------------------------------------------------------------------------
 
+&&who
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - WHO
+-------------------------------------------------------------------------------
 /who - Detailed Help:
 The /who command lists all users currently connected to the server.
+-------------------------------------------------------------------------------
 
+&&addchannel
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - ADDCHANNEL
+-------------------------------------------------------------------------------
 /addchannel <channel_name> <display_name> - Detailed Help:
 The /addchannel command lets you add a new chat channel.
 Usage: /addchannel <channel_name> <display_name>
 
+&&listchannels
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - LISTCHANNELS
+-------------------------------------------------------------------------------
 /listchannels - Detailed Help:
 The /listchannels command displays a list of all available chat channels.
 
+&&removechannel
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - REMOVECHANNEL
+-------------------------------------------------------------------------------
 /removechannel <channel_name> - Detailed Help:
 The /removechannel command lets you remove an existing chat channel.
 Usage: /removechannel <channel_name>
 
+&&look
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - LOOK
+-------------------------------------------------------------------------------
 /look - Detailed Help:
 The /look command allows you to see a description of your current room.
 
+&&go
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - GO
+-------------------------------------------------------------------------------
 /go <direction> - Detailed Help:
 The /go command allows you to move in a specified direction.
 Usage: /go <direction>
 
+&&help
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - HELP
+-------------------------------------------------------------------------------
 /help - Detailed Help:
 The /help command displays general help information, including a list of available commands.
 
+&&helpcommand
+-------------------------------------------------------------------------------
+PyMUSH Detailed Help - HELP COMMAND
+-------------------------------------------------------------------------------
 /help <command> - Detailed Help:
 The /help <command> provides detailed help for the specified command.
 Usage: /help <command>
