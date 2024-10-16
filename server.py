@@ -6,7 +6,7 @@ import os
 import configparser
 import logging
 from logging.handlers import RotatingFileHandler
-from mush_commands import handle_command
+from mush_commands import handle_command, show_help
 import time
 
 class SimpleMUSHServer:
@@ -84,8 +84,10 @@ Would you like to (1) Login or (2) Create a new character?
                     client_socket.send(b'Character creation successful! Please login.\n')
                 else:
                     client_socket.send(b'Character creation failed. Please try again.\n')
+            elif option == '/help':
+                show_help(client_socket)
             else:
-                client_socket.send(b'Invalid option. Please enter 1 to Login or 2 to Create a new character.\n')
+                client_socket.send(b'Invalid option. Please enter 1 to Login or 2 to Create a new character, or type /help for available commands.\n')
         
         client_socket.send(b'Authentication successful!\n')
         self.clients.append(client_socket)
@@ -96,7 +98,9 @@ Would you like to (1) Login or (2) Create a new character?
                 message = client_socket.recv(1024).decode('utf-8').strip()
                 if not message:
                     break
-                if message.startswith('/'):
+                if message == '/help':
+                    show_help(client_socket)
+                elif message.startswith('/'):
                     logging.debug(f'Received command from client {client_address}: {message}')
                     handle_command(message, client_socket, self.clients)
                 elif message.startswith('+'):
