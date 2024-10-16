@@ -1,4 +1,4 @@
-def handle_command(command, client_socket, clients, channels, channel_config_file):
+def handle_command(command, client_socket, clients, channels, channel_config_file, player_rooms, rooms):
     if command.startswith('/quit'):
         client_socket.send(b'Disconnecting...\n')
         clients.remove(client_socket)
@@ -55,5 +55,32 @@ def handle_command(command, client_socket, clients, channels, channel_config_fil
                     config_file.write(line)
         
         client_socket.send(f'Channel "{channel_name}" removed successfully.\n'.encode('utf-8'))
+    elif command.startswith('/look'):
+        # Look around the current room
+        room_id = player_rooms.get(client_socket, "1")
+        room = rooms.get(room_id)
+        if room:
+            client_socket.send(f'You are in {room["name"]}.\n{room["description"]}\n'.encode('utf-8'))
+            if room["exits"]:
+                exits = ', '.join(room["exits"].keys())
+                client_socket.send(f'Exits: {exits}\n'.encode('utf-8'))
+        else:
+            client_socket.send(b'You are in an unknown place.\n')
+    elif command.startswith('/go '):
+        # Move to a new room
+        parts = command.split(' ', 1)
+        if len(parts) < 2:
+            client_socket.send(b'Usage: /go <direction>\n')
+            return
+        direction = parts[1].lower()
+        current_room_id = player_rooms.get(client_socket, "1")
+        current_room = rooms.get(current_room_id)
+        if current_room and direction in current_room["exits"]:
+            new_room_id = current_room["exits"][direction]
+            player_rooms[client_socket] = new_room_id
+            new_room = rooms.get(new_room_id)
+            client_socket.send(f'You move {direction} and arrive in {new_room["name"]}.\n{new_room["description"]}\n'.encode('utf-8'))
+        else:
+            client_socket.send(b'You cannot go that way.\n')
     else:
         client_socket.send(b'Unknown command.\n')
